@@ -158,6 +158,14 @@
             </div>
             <div class="column-body" id="body-ceo"></div>
         </div>
+
+        <div class="kanban-column" id="col-done">
+            <div class="column-header opacity-60">
+                <span class="uppercase tracking-widest text-sm text-slate-400">Sprint History</span>
+                <span id="count-done" class="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs border border-slate-600">0</span>
+            </div>
+            <div class="column-body opacity-60" id="body-done"></div>
+        </div>
     </div>
 
     <script>
@@ -181,7 +189,7 @@
             let all = [];
             for(const r of DOMAINS) {
                 try {
-                    const res = await fetch(`https://api.github.com/repos/${r}/issues?state=open`, {
+                    const res = await fetch(`https://api.github.com/repos/${r}/issues?state=all&per_page=20`, {
                         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
                     });
                     if(res.ok) {
@@ -201,9 +209,10 @@
                 backlog: document.getElementById('body-backlog'),
                 progress: document.getElementById('body-progress'),
                 qa: document.getElementById('body-qa'),
-                ceo: document.getElementById('body-ceo')
+                ceo: document.getElementById('body-ceo'),
+                done: document.getElementById('body-done')
             };
-            const counts = { backlog: 0, progress: 0, qa: 0, ceo: 0 };
+            const counts = { backlog: 0, progress: 0, qa: 0, ceo: 0, done: 0 };
             
             Object.values(cols).forEach(c => c.innerHTML = '');
             
@@ -213,12 +222,19 @@
                 const agent = match ? getBadge(match[1]) : '';
                 const labelsHtml = issue.labels.map(l => `<span class="text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded border" style="border-color:#${l.color}88; color:#${l.color}">${l.name}</span>`).join('');
                 
-                // Route to column based on labels
+                // Route to column based on labels and state
                 const labelNames = issue.labels.map(l => l.name.toLowerCase());
                 let targetCol = 'backlog';
-                if (labelNames.includes('agent-executing') || labelNames.includes('in-progress')) targetCol = 'progress';
-                else if (labelNames.includes('qa-review') || labelNames.includes('qa-audit')) targetCol = 'qa';
-                else if (labelNames.includes('ceo-approval') || labelNames.includes('done')) targetCol = 'ceo';
+                
+                if (issue.state === 'closed') {
+                    targetCol = 'done';
+                } else if (labelNames.includes('agent-executing') || labelNames.includes('in-progress')) {
+                    targetCol = 'progress';
+                } else if (labelNames.includes('qa-review') || labelNames.includes('qa-audit')) {
+                    targetCol = 'qa';
+                } else if (labelNames.includes('ceo-approval')) {
+                    targetCol = 'ceo';
+                }
                 
                 counts[targetCol]++;
 
@@ -228,7 +244,7 @@
                         <h4 class="font-semibold text-sm mb-3 text-white leading-snug cursor-pointer hover:text-sky-400" onclick="window.open('${issue.html_url}', '_blank')">${issue.title}</h4>
                         <div class="flex flex-wrap gap-1 mb-3">${labelsHtml}</div>
                         <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-700/50">
-                            <span class="text-xs text-slate-500">#${issue.number}</span>
+                            <span class="text-xs text-slate-500">#${issue.number} ${issue.state === 'closed' ? '✅' : ''}</span>
                             ${agent}
                         </div>
                         ${targetCol === 'ceo' ? `
@@ -244,6 +260,7 @@
             document.getElementById('count-progress').innerText = counts.progress;
             document.getElementById('count-qa').innerText = counts.qa;
             document.getElementById('count-ceo').innerText = counts.ceo;
+            document.getElementById('count-done').innerText = counts.done;
         }
 
         async function approveIssue(repo, issueNumber, event) {
