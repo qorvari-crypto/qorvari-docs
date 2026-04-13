@@ -115,6 +115,10 @@
         <h2 class="text-2xl font-semibold mb-2">Secure Connection Required</h2>
         <p class="text-slate-400 text-sm mb-6">Enter your GitHub Personal Access Token to establish a secure WebSocket/REST connection to the Qorvari Agent Swarm.</p>
         <input type="password" id="pat-input" placeholder="github_pat_..." class="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-lg mb-4 font-mono focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition">
+        <label class="flex items-center gap-2 mb-6 text-sm text-slate-300">
+            <input type="checkbox" id="remember-me" checked class="form-checkbox bg-slate-900 border-slate-600 rounded text-sky-500">
+            Remember my token securely in this browser (localStorage)
+        </label>
         <button onclick="initializeDashboard()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(2,132,199,0.5)]">
             Establish Uplink
         </button>
@@ -239,7 +243,7 @@
         }
 
         async function updateData() {
-            const token = document.getElementById('pat-input').value;
+            const token = localStorage.getItem('qorvari_pat') || document.getElementById('pat-input').value;
             if(!token) return;
             const issues = await fetchIssuesData(token);
             renderBoard(issues);
@@ -251,17 +255,36 @@
         }
 
         function initializeDashboard() {
-            const token = document.getElementById('pat-input').value;
-            if(!token) return alert('Token required');
+            const inputToken = document.getElementById('pat-input').value;
+            const savedToken = localStorage.getItem('qorvari_pat');
+            
+            let tokenToUse = inputToken || savedToken;
+
+            if(!tokenToUse) return alert('GitHub Token required for first login.');
+            
+            if (inputToken && document.getElementById('remember-me')?.checked) {
+                localStorage.setItem('qorvari_pat', inputToken);
+            }
             
             document.getElementById('auth-panel').style.display = 'none';
             document.getElementById('stats-panel').style.display = 'grid';
             document.getElementById('board').classList.remove('hidden');
             
             updateData();
-            // Polling every 15 seconds for real-time edge
             pollInterval = setInterval(updateData, 15000);
         }
+
+        function logout() {
+            localStorage.removeItem('qorvari_pat');
+            location.reload();
+        }
+
+        // Auto-login on load if token exists
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('qorvari_pat')) {
+                initializeDashboard();
+            }
+        });
     </script>
 </body>
 </html>
