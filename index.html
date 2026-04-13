@@ -191,29 +191,51 @@
 
         function renderBoard(issues) {
             document.getElementById('stat-tickets').innerText = issues.length;
-            const bBody = document.getElementById('body-backlog');
-            bBody.innerHTML = '';
+            
+            // Clear all columns
+            const cols = {
+                backlog: document.getElementById('body-backlog'),
+                progress: document.getElementById('body-progress'),
+                qa: document.getElementById('body-qa'),
+                ceo: document.getElementById('body-ceo')
+            };
+            const counts = { backlog: 0, progress: 0, qa: 0, ceo: 0 };
+            
+            Object.values(cols).forEach(c => c.innerHTML = '');
             
             issues.forEach(issue => {
                 const repo = issue.repository_url.split('/').pop();
                 const match = issue.body ? issue.body.match(/@(Agent-[A-Za-z0-9-]+)/i) : null;
                 const agent = match ? getBadge(match[1]) : '';
-                const labels = issue.labels.map(l => `<span class="text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded border" style="border-color:#${l.color}88; color:#${l.color}">${l.name}</span>`).join('');
+                const labelsHtml = issue.labels.map(l => `<span class="text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded border" style="border-color:#${l.color}88; color:#${l.color}">${l.name}</span>`).join('');
                 
+                // Route to column based on labels
+                const labelNames = issue.labels.map(l => l.name.toLowerCase());
+                let targetCol = 'backlog';
+                if (labelNames.includes('agent-executing') || labelNames.includes('in-progress')) targetCol = 'progress';
+                else if (labelNames.includes('qa-review') || labelNames.includes('qa-audit')) targetCol = 'qa';
+                else if (labelNames.includes('ceo-approval') || labelNames.includes('done')) targetCol = 'ceo';
+                
+                counts[targetCol]++;
+
                 const card = `
                     <div class="ticket-card" onclick="window.open('${issue.html_url}', '_blank')">
                         <div class="text-[0.65rem] text-slate-400 uppercase tracking-widest mb-2">${repo}</div>
                         <h4 class="font-semibold text-sm mb-3 text-white leading-snug">${issue.title}</h4>
-                        <div class="flex flex-wrap gap-1 mb-3">${labels}</div>
+                        <div class="flex flex-wrap gap-1 mb-3">${labelsHtml}</div>
                         <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-700/50">
                             <span class="text-xs text-slate-500">#${issue.number}</span>
                             ${agent}
                         </div>
                     </div>
                 `;
-                bBody.innerHTML += card;
+                cols[targetCol].innerHTML += card;
             });
-            document.getElementById('count-backlog').innerText = issues.length;
+            
+            document.getElementById('count-backlog').innerText = counts.backlog;
+            document.getElementById('count-progress').innerText = counts.progress;
+            document.getElementById('count-qa').innerText = counts.qa;
+            document.getElementById('count-ceo').innerText = counts.ceo;
         }
 
         async function updateData() {
