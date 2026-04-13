@@ -398,14 +398,21 @@
             
             let tokenToUse = inputToken || savedToken;
 
-            if(!tokenToUse) return alert('GitHub Token required for first login.');
+            if(!tokenToUse) return showModal('error', 'Authentication Failed', 'A GitHub PAT is required to establish the uplink.');
             
             if (inputToken && document.getElementById('remember-me')?.checked) {
                 localStorage.setItem('qorvari_pat', inputToken);
             }
             
-            document.getElementById('auth-panel').style.display = 'none';
-            document.getElementById('stats-panel').style.display = 'grid';
+            const authPanel = document.getElementById('auth-panel');
+            if (authPanel) authPanel.style.display = 'none';
+            
+            const statsPanel = document.getElementById('stats-panel');
+            if (statsPanel) {
+                statsPanel.classList.remove('hidden');
+                statsPanel.style.display = 'flex';
+            }
+
             document.getElementById('board').classList.remove('hidden');
             
             updateData();
