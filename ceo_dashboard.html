@@ -81,12 +81,23 @@
             </h1>
             <p class="text-slate-400 mt-2 font-light">Global Autonomous Microservice Orchestration</p>
         </div>
-        <div class="text-right glass-panel p-3 px-6 hidden md:block">
-            <div class="flex items-center gap-3">
-                <span class="live-indicator"></span>
-                <span class="text-sm font-semibold tracking-widest text-emerald-400 uppercase" id="sync-status">Live Sync Active</span>
+        <div class="text-right glass-panel p-3 px-6 hidden md:flex items-center gap-6">
+            <div id="sprint-controls" class="flex items-center gap-4 border-r border-slate-700/50 pr-6">
+                <div class="text-left">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Active Iteration</div>
+                    <div class="text-lg font-bold text-sky-400 mt-0.5">SPRINT <span id="sprint-id-display">2</span></div>
+                </div>
+                <button onclick="closeActiveSprint()" class="ml-2 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-[10px] uppercase font-bold transition text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] tracking-wider">
+                    Complete Sprint ▶
+                </button>
             </div>
-            <div class="text-xs text-slate-500 mt-1">Polling GitHub API every 15s</div>
+            <div class="text-left">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="live-indicator"></span>
+                    <span class="text-[10px] font-semibold tracking-widest text-emerald-400 uppercase" id="sync-status">Live Sync</span>
+                </div>
+                <div class="text-[10px] text-slate-500">Polling Matrix (15s)</div>
+            </div>
         </div>
     </header>
 
@@ -212,8 +223,9 @@
         }
 
         function renderBoard(issues) {
-            document.getElementById('stat-tickets').innerText = issues.length;
-            
+            let activeSprint = parseInt(localStorage.getItem('qorvari_active_sprint')) || 2;
+            document.getElementById('sprint-id-display').innerText = activeSprint;
+
             // Clear all columns
             const cols = {
                 backlog: document.getElementById('body-backlog'),
@@ -226,30 +238,43 @@
             
             Object.values(cols).forEach(c => c.innerHTML = '');
             
+            let futureSprintHtml = '';
+            let futureCount = 0;
+
             issues.forEach(issue => {
                 const repo = issue.repository_url.split('/').pop();
                 const match = issue.body ? issue.body.match(/@(Agent-[A-Za-z0-9-]+)/i) : null;
                 const agent = match ? getBadge(match[1]) : '';
                 const labelsHtml = issue.labels.map(l => `<span class="text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded border" style="border-color:#${l.color}88; color:#${l.color}">${l.name}</span>`).join('');
                 
+                // Determine Sprint grouping
+                const sprintMatch = issue.title.match(/\[SPRINT\s*(\d+)\]/i);
+                let issueSprint = sprintMatch ? parseInt(sprintMatch[1]) : 1;
+                
+                if (issueSprint > activeSprint && issue.state !== 'closed') {
+                    // It is a future sprint waiting in the icebox
+                    futureCount++;
+                    futureSprintHtml += `
+                        <div class="p-3 mb-2 bg-slate-800/30 border border-dashed border-slate-700 rounded text-xs text-slate-400 opacity-60">
+                            [SPRINT ${issueSprint}] ${issue.title.replace(/\[SPRINT\s*\d+\]/i, '')}
+                        </div>
+                    `;
+                    return; // Skip normal routing
+                }
+
                 // Route to column based on labels and state
                 const labelNames = issue.labels.map(l => l.name.toLowerCase());
                 let targetCol = 'backlog';
                 
-                if (issue.state === 'closed') {
-                    targetCol = 'done';
-                } else if (labelNames.includes('agent-executing') || labelNames.includes('in-progress')) {
-                    targetCol = 'progress';
-                } else if (labelNames.includes('qa-review') || labelNames.includes('qa-audit')) {
-                    targetCol = 'qa';
-                } else if (labelNames.includes('ceo-approval')) {
-                    targetCol = 'ceo';
-                }
+                if (issue.state === 'closed') targetCol = 'done';
+                else if (labelNames.includes('agent-executing') || labelNames.includes('in-progress')) targetCol = 'progress';
+                else if (labelNames.includes('qa-review') || labelNames.includes('qa-audit')) targetCol = 'qa';
+                else if (labelNames.includes('ceo-approval')) targetCol = 'ceo';
                 
                 counts[targetCol]++;
 
                 const card = `
-                    <div class="ticket-card">
+                    <div class="ticket-card ${issue.state === 'closed' ? 'opacity-70' : ''}">
                         <div class="text-[0.65rem] text-slate-400 uppercase tracking-widest mb-2">${repo}</div>
                         <h4 class="font-semibold text-sm mb-3 text-white leading-snug cursor-pointer hover:text-sky-400" onclick="window.open('${issue.html_url}', '_blank')">${issue.title}</h4>
                         <div class="flex flex-wrap gap-1 mb-3">${labelsHtml}</div>
@@ -266,11 +291,31 @@
                 cols[targetCol].innerHTML += card;
             });
             
+            if (futureCount > 0) {
+                cols['backlog'].innerHTML += `
+                    <div class="mt-6 pt-6 border-t border-slate-700/50">
+                        <h5 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center">
+                            <span class="bg-slate-700 px-2 py-0.5 rounded-full text-[10px] mr-2 text-white">${futureCount}</span> 
+                            Future Sprints (Icebox)
+                        </h5>
+                        ${futureSprintHtml}
+                    </div>
+                `;
+            }
+
             document.getElementById('count-backlog').innerText = counts.backlog;
             document.getElementById('count-progress').innerText = counts.progress;
             document.getElementById('count-qa').innerText = counts.qa;
             document.getElementById('count-ceo').innerText = counts.ceo;
             document.getElementById('count-done').innerText = counts.done;
+        }
+
+        function closeActiveSprint() {
+            let active = parseInt(localStorage.getItem('qorvari_active_sprint')) || 2;
+            showModal('confirm', 'Finalize Sprint Iteration', `Are you sure you want to technically close Sprint ${active} and rotate the backlog to Sprint ${active + 1}?`, () => {
+                localStorage.setItem('qorvari_active_sprint', active + 1);
+                showModal('success', 'Iteration Cycled', `Sprint ${active+1} is now the active operational timeline. Retrospective generated.`, updateData);
+            });
         }
 
         function showModal(type, title, msg, onConfirm) {
