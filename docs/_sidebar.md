@@ -1,6 +1,8 @@
 * **Command & Control**
   * [CEO Live Dashboard](../ceo_dashboard.html)
 * **Architecture Specs**
+  * [High-Level Infra (Mermaid Visual)](16_High_Level_Architecture.md)
+  * [Agent Swarm Logic (Sequence Chart)](17_Agent_Swarm_Architecture.md)
   * [Chief Architect Tech Stack](10_Chief_Architect_Tech_Stack.md)
   * [DevOps & Cloud Scaling](08_Cloud_Agent_Scaling.md)
   * [Cost Optimization](09_DevOps_Cost_Optimization_Plan.md)
