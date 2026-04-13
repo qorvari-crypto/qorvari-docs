@@ -278,6 +278,8 @@
                 const repo = issue.repository_url.split('/').pop();
                 const match = issue.body ? issue.body.match(/@(Agent-[A-Za-z0-9-]+)/i) : null;
                 const agent = match ? getHoverBadge(match[1]) : '';
+                const pointsMatch = issue.body ? issue.body.match(/Story Points:\*\* `(\d+)`/i) : null;
+                const pointsHtml = pointsMatch ? `<span class="bg-indigo-900/50 text-indigo-300 font-bold px-2 py-0.5 rounded text-[10px] ml-2 shadow-inner border border-indigo-500/30">PTS: ${pointsMatch[1]}</span>` : '';
                 const labelsHtml = issue.labels.map(l => `<span class="text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded border" style="border-color:#${l.color}88; color:#${l.color}">${l.name}</span>`).join('');
                 
                 const labelNames = issue.labels.map(l => l.name.toLowerCase());
@@ -298,7 +300,7 @@
                         <h4 class="font-semibold text-sm mb-3 text-white leading-snug cursor-pointer hover:text-sky-400" onclick="window.open('${issue.html_url}', '_blank')">${issue.title.replace(/\[SPRINT\s*\d+\]\s*/i, '')}</h4>
                         <div class="flex flex-wrap gap-1 mb-3">${labelsHtml}</div>
                         <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-700/50 min-h-[36px]">
-                            <span class="text-xs text-slate-500">${issue.state === 'closed' ? '✅ Completed' : 'In Queue'}</span>
+                            <span class="text-xs text-slate-500">${issue.state === 'closed' ? '✅ Completed' : 'In Queue'} ${pointsHtml}</span>
                             ${agent}
                         </div>
                         ${targetCol === 'ceo' ? `<button onclick="approveIssue('qorvari-crypto/${repo}', ${issue.number}, event)" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs transition shadow-[0_0_10px_rgba(16,185,129,0.3)] tracking-wider">✅ 1-CLICK APPROVE</button>` : ''}
@@ -337,12 +339,15 @@
                     const repo = issue.repository_url.split('/').pop();
                     const match = issue.body ? issue.body.match(/@(Agent-[A-Za-z0-9-]+)/i) : null;
                     const agent = match ? getHoverBadge(match[1]) : '';
+                    const pointsMatch = issue.body ? issue.body.match(/Story Points:\*\* `(\d+)`/i) : null;
+                    const pointsHtml = pointsMatch ? `<span class="bg-indigo-900/50 text-indigo-300 font-bold px-2 py-0.5 rounded text-[10px] ml-2 shadow-inner border border-indigo-500/30">PTS: ${pointsMatch[1]}</span>` : '';
                     html += `
                         <div class="backlog-row" onclick="window.open('${issue.html_url}', '_blank')">
                             <div class="flex items-center gap-4">
                                 <span class="bg-slate-800 text-slate-400 px-2 py-1 rounded font-mono text-xs shadow-inner">#${issue.number}</span>
                                 <span class="repo-tag w-32 truncate" title="${repo}">${repo.replace('qorvari-','')}</span>
                                 <span class="text-white text-sm font-semibold truncate hover:text-sky-400" style="max-width:400px;">${issue.title.replace(/\[SPRINT\s*\d+\]\s*/i, '')}</span>
+                                ${pointsHtml}
                                 ${issue.state === 'closed' ? '<span class="bg-emerald-900/40 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold ml-2">Merged ✅</span>' : ''}
                             </div>
                             <div class="flex items-center gap-3">
