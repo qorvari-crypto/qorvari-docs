@@ -85,10 +85,14 @@
             <div id="sprint-controls" class="flex items-center gap-4 border-r border-slate-700/50 pr-6">
                 <div class="text-left">
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Active Iteration</div>
-                    <div class="text-lg font-bold text-sky-400 mt-0.5">SPRINT <span id="sprint-id-display">2</span></div>
+                    <div class="text-lg font-bold text-sky-400 mt-0.5 flex items-center">
+                        <button onclick="changeSprint(-1)" class="text-slate-500 hover:text-white mr-1 text-xs transition">◀</button>
+                        <span>SPRINT <span id="sprint-id-display">2</span></span>
+                        <button onclick="changeSprint(1)" class="text-slate-500 hover:text-white ml-1 text-xs transition">▶</button>
+                    </div>
                 </div>
-                <button onclick="closeActiveSprint()" class="ml-2 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-[10px] uppercase font-bold transition text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] tracking-wider">
-                    Complete Sprint ▶
+                <button onclick="closeActiveSprint()" class="ml-4 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-[10px] uppercase font-bold transition text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] tracking-wider">
+                    Finalize Sprint
                 </button>
             </div>
             <div class="text-left">
@@ -316,6 +320,13 @@
                 localStorage.setItem('qorvari_active_sprint', active + 1);
                 showModal('success', 'Iteration Cycled', `Sprint ${active+1} is now the active operational timeline. Retrospective generated.`, updateData);
             });
+        }
+
+        function changeSprint(delta) {
+            let active = parseInt(localStorage.getItem('qorvari_active_sprint')) || 2;
+            active = Math.max(1, active + delta); // Prevent dropping below Sprint 1
+            localStorage.setItem('qorvari_active_sprint', active);
+            updateData();
         }
 
         function showModal(type, title, msg, onConfirm) {
