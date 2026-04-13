@@ -168,6 +168,16 @@
         </div>
     </div>
 
+    <!-- Premium Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="glass-panel p-8 max-w-sm w-full mx-4 text-center transform scale-95 transition-transform duration-300" id="modal-content-box">
+            <div id="modal-icon" class="text-5xl mb-4 drop-shadow-md">⚠️</div>
+            <h3 id="modal-title" class="text-xl font-bold text-white mb-2">System Alert</h3>
+            <p id="modal-msg" class="text-slate-300 text-sm mb-6">Are you sure?</p>
+            <div id="modal-actions" class="flex gap-4 justify-center"></div>
+        </div>
+    </div>
+
     <script>
         const DOMAINS = ['qorvari-crypto/qorvari-discovery-initiator', 'qorvari-crypto/qorvari-discovery-core', 'qorvari-crypto/qorvari-assessment-engine', 'qorvari-crypto/qorvari-ui', 'qorvari-crypto/qorvari-platform'];
         let pollInterval;
@@ -263,11 +273,46 @@
             document.getElementById('count-done').innerText = counts.done;
         }
 
-        async function approveIssue(repo, issueNumber, event) {
-            event.stopPropagation();
-            const token = localStorage.getItem('qorvari_pat') || document.getElementById('pat-input').value;
-            if (!confirm('Are you sure you want to officially approve and merge this ticket?')) return;
+        function showModal(type, title, msg, onConfirm) {
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('modal-content-box');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
             
+            const actions = document.getElementById('modal-actions');
+            actions.innerHTML = '';
+            
+            if (type === 'confirm') {
+                document.getElementById('modal-icon').innerText = '🛡️';
+                actions.innerHTML = `
+                    <button onclick="closeModal()" class="px-5 py-2 text-sm font-semibold text-slate-400 hover:text-white transition">Cancel</button>
+                    <button id="modal-btn-confirm" class="px-5 py-2 text-sm font-bold bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition shadow-lg box-border">Authorize</button>
+                `;
+                document.getElementById('modal-btn-confirm').onclick = () => { closeModal(); if(onConfirm) onConfirm(); };
+            } else if (type === 'success') {
+                document.getElementById('modal-icon').innerText = '✅';
+                actions.innerHTML = `
+                    <button onclick="closeModal(); if(${!!onConfirm}) { ${onConfirm.name}() }" class="px-8 py-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition shadow-lg">Acknowledge</button>
+                `;
+            } else if (type === 'error') {
+                document.getElementById('modal-icon').innerText = '❌';
+                actions.innerHTML = `<button onclick="closeModal()" class="px-8 py-2 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition shadow-lg">Dismiss</button>`;
+            }
+
+            modal.classList.remove('hidden');
+            // Small trigger delay for CSS transition
+            setTimeout(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('modal-content-box');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        async function executeApproval(repo, issueNumber, token) {
             try {
                 const res = await fetch(`https://api.github.com/repos/${repo}/issues/${issueNumber}`, {
                     method: 'PATCH',
@@ -275,10 +320,19 @@
                     body: JSON.stringify({ state: 'closed' })
                 });
                 if(res.ok) {
-                    alert('Approval Granted. Issue Closed Successfully.');
-                    updateData();
+                    showModal('success', 'Execution Authorized', 'The PR has been merged and the ticket is now securely sealed in the Sprint History.', updateData);
+                } else {
+                    showModal('error', 'API Failure', 'Authorization rejected by the GitHub API layer.');
                 }
-            } catch(e) { alert('Approval failed. Check API connectivity.'); }
+            } catch(e) { 
+                showModal('error', 'Network Failure', 'Failed to connect to the external API.'); 
+            }
+        }
+
+        function approveIssue(repo, issueNumber, event) {
+            event.stopPropagation();
+            const token = localStorage.getItem('qorvari_pat') || document.getElementById('pat-input').value;
+            showModal('confirm', 'CEO Authorization Required', `Are you actively authorizing the integration of Ticket #${issueNumber} into the core architecture?`, () => executeApproval(repo, issueNumber, token));
         }
 
         async function updateData() {
