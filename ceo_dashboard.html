@@ -223,14 +223,18 @@
                 counts[targetCol]++;
 
                 const card = `
-                    <div class="ticket-card" onclick="window.open('${issue.html_url}', '_blank')">
+                    <div class="ticket-card">
                         <div class="text-[0.65rem] text-slate-400 uppercase tracking-widest mb-2">${repo}</div>
-                        <h4 class="font-semibold text-sm mb-3 text-white leading-snug">${issue.title}</h4>
+                        <h4 class="font-semibold text-sm mb-3 text-white leading-snug cursor-pointer hover:text-sky-400" onclick="window.open('${issue.html_url}', '_blank')">${issue.title}</h4>
                         <div class="flex flex-wrap gap-1 mb-3">${labelsHtml}</div>
                         <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-700/50">
                             <span class="text-xs text-slate-500">#${issue.number}</span>
                             ${agent}
                         </div>
+                        ${targetCol === 'ceo' ? `
+                        <button onclick="approveIssue('${repo}', ${issue.number}, event)" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded text-xs transition shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                            ✅ 1-CLICK APPROVE \& CLOSE
+                        </button>` : ''}
                     </div>
                 `;
                 cols[targetCol].innerHTML += card;
@@ -240,6 +244,24 @@
             document.getElementById('count-progress').innerText = counts.progress;
             document.getElementById('count-qa').innerText = counts.qa;
             document.getElementById('count-ceo').innerText = counts.ceo;
+        }
+
+        async function approveIssue(repo, issueNumber, event) {
+            event.stopPropagation();
+            const token = localStorage.getItem('qorvari_pat') || document.getElementById('pat-input').value;
+            if (!confirm('Are you sure you want to officially approve and merge this ticket?')) return;
+            
+            try {
+                const res = await fetch(`https://api.github.com/repos/${repo}/issues/${issueNumber}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state: 'closed' })
+                });
+                if(res.ok) {
+                    alert('Approval Granted. Issue Closed Successfully.');
+                    updateData();
+                }
+            } catch(e) { alert('Approval failed. Check API connectivity.'); }
         }
 
         async function updateData() {
