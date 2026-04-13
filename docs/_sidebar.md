@@ -12,6 +12,7 @@
   * [Sprint 2 Planning (Dockerization)](15_Sprint_2_Planning_Meeting.md)
   * [Sprint 2 Retrospective ✅](Sprint_2_Retrospective.md)
   * [Sprint 3 Planning (Production Readiness)](Sprint_3_Planning.md)
+  * [Sprint 4 Planning (Scale & Monetization)](Sprint_4_Planning.md)
   * [R&D Future Roadmap](13_RD_Feature_Roadmap.md)
 * **Organization Core**
   * [Vision & Motto](01_Vision_and_Motto.md)
