@@ -7,6 +7,7 @@
   * [Sprint Execution Data](04_Execution_Order_and_Architecture.md)
 * **Agile Sprints**
   * [Sprint 1 Retro (Velocity)](14_Sprint_1_Retrospective.md)
+  * [Sprint 2 Planning (Dockerization)](15_Sprint_2_Planning_Meeting.md)
   * [R&D Future Roadmap](13_RD_Feature_Roadmap.md)
 * **Organization Core**
   * [Vision & Motto](01_Vision_and_Motto.md)
