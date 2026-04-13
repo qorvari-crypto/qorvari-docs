@@ -331,7 +331,10 @@
                             <h3 class="font-bold text-white text-lg tracking-wider">SPRINT ${sprintNum}</h3>
                             ${sprintNum === getActiveSprint() ? '<span class="bg-indigo-600/20 border border-indigo-500 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-widest shadow-inner">Active Execution Matrix</span>' : ''}
                         </div>
-                        <div class="text-slate-400 text-xs font-bold bg-slate-800 px-3 py-1 rounded-full">${sprintsMap[sprintNum].length} TASKS</div>
+                        <div class="flex items-center gap-4">
+                            <button onclick="deploySprint(${sprintNum})" class="bg-sky-600 hover:bg-sky-500 text-[10px] font-bold text-white px-3 py-1 rounded uppercase tracking-widest shadow-[0_0_10px_rgba(2,132,199,0.3)] transition">🛫 Deploy Sprint Matrix</button>
+                            <div class="text-slate-400 text-xs font-bold bg-slate-800 px-3 py-1 rounded-full">${sprintsMap[sprintNum].length} TASKS</div>
+                        </div>
                     </div>
                     <div class="sprint-items">
                 `;
@@ -359,6 +362,31 @@
                 });
                 html += `</div></div>`;
                 container.innerHTML += html;
+            });
+        }
+
+        async function deploySprint(sprintNum) {
+            const token = localStorage.getItem('qorvari_pat');
+            showModal('confirm', 'Deploy Algorithmic Sprint Matrix', `Are you actively releasing SPRINT ${sprintNum} from the Planning Sandbox to live Execution?\n\nThis will strip the planning restrictions from the architectural tickets and expose them to the Live LLM Swarm for immediate processing.`, async () => {
+                const targetIssues = cachedIssues.filter(i => extractSprintNumber(i.title) === sprintNum && i.labels.some(l => l.name === 'sprint-planning'));
+                
+                showModal('success', 'Deployment Executed', `Unleashing Swarm on ${targetIssues.length} microservices.`);
+                
+                for(const issue of targetIssues) {
+                    const repo = issue.repository_url.split('/').pop();
+                    try {
+                        await fetch(`https://api.github.com/repos/qorvari-crypto/${repo}/issues/${issue.number}`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ labels: [] }) // Strip sprint-planning label
+                        });
+                    } catch(e) { }
+                }
+                
+                // Switch Contexts automatically.
+                if(getActiveSprint() !== sprintNum) changeSprint(sprintNum - getActiveSprint());
+                switchTab('board');
+                updateData();
             });
         }
 
