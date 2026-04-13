@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qorvari | CEO Command Center</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { 
+            background: radial-gradient(circle at top left, #0f172a, #020617);
+            color: #f8fafc; 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        .glow-text {
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+        }
+        .kanban-board { display: flex; gap: 1.5rem; overflow-x: auto; padding-bottom: 2rem; scrollbar-width: thin; }
+        .kanban-column { min-width: 320px; max-width: 320px; display: flex; flex-direction: column; }
+        .column-header { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.6); border-radius: 12px 12px 0 0; }
+        .column-body { padding: 1rem; flex-grow: 1; min-height: 500px; display: flex; flex-direction: column; gap: 1rem; background: rgba(30, 41, 59, 0.2); border-radius: 0 0 12px 12px; border: 1px solid rgba(255,255,255,0.05); border-top: none; }
+        
+        .ticket-card { 
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 8px; 
+            padding: 1.2rem; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            position: relative;
+            overflow: hidden;
+        }
+        .ticket-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: #38bdf8;
+            opacity: 0.5;
+        }
+        .ticket-card:hover { 
+            transform: translateY(-3px);
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        
+        .agent-badge { font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 20px; color: white; display: inline-flex; align-items: center; gap: 0.3rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .agent-dev { background: linear-gradient(90deg, #10b981, #059669); }
+        .agent-ops { background: linear-gradient(90deg, #8b5cf6, #6d28d9); }
+        .agent-qa { background: linear-gradient(90deg, #ec4899, #be185d); }
+        .agent-po { background: linear-gradient(90deg, #f59e0b, #b45309); }
+        
+        .live-indicator {
+            width: 8px; height: 8px; background-color: #10b981; border-radius: 50%;
+            animation: pulse 2s infinite; display: inline-block;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-10 pb-4 border-b border-slate-800">
+        <div>
+            <h1 class="text-4xl font-bold glow-text tracking-tight flex items-center gap-4">
+                <svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                QORVARI CHIEF EXECUTIVE
+            </h1>
+            <p class="text-slate-400 mt-2 font-light">Global Autonomous Microservice Orchestration</p>
+        </div>
+        <div class="text-right glass-panel p-3 px-6 hidden md:block">
+            <div class="flex items-center gap-3">
+                <span class="live-indicator"></span>
+                <span class="text-sm font-semibold tracking-widest text-emerald-400 uppercase" id="sync-status">Live Sync Active</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1">Polling GitHub API every 15s</div>
+        </div>
+    </header>
+
+    <!-- Global Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10" id="stats-panel" style="display:none;">
+        <div class="glass-panel p-5">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Active Modules</h3>
+            <div class="text-3xl font-bold text-sky-400">13</div>
+        </div>
+        <div class="glass-panel p-5">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Open Tickets</h3>
+            <div class="text-3xl font-bold text-white" id="stat-tickets">0</div>
+        </div>
+        <div class="glass-panel p-5">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Active Agents</h3>
+            <div class="text-3xl font-bold text-emerald-400">4 <span class="text-sm font-normal text-slate-500">online</span></div>
+        </div>
+        <div class="glass-panel p-5">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">CEO Burn Rate</h3>
+            <div class="text-3xl font-bold text-rose-400">$2.40 <span class="text-sm font-normal text-slate-500">/ day avg</span></div>
+        </div>
+    </div>
+
+    <!-- Auth Panel -->
+    <div id="auth-panel" class="max-w-xl mx-auto mt-20 glass-panel p-8">
+        <h2 class="text-2xl font-semibold mb-2">Secure Connection Required</h2>
+        <p class="text-slate-400 text-sm mb-6">Enter your GitHub Personal Access Token to establish a secure WebSocket/REST connection to the Qorvari Agent Swarm.</p>
+        <input type="password" id="pat-input" placeholder="github_pat_..." class="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-lg mb-4 font-mono focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition">
+        <button onclick="initializeDashboard()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(2,132,199,0.5)]">
+            Establish Uplink
+        </button>
+    </div>
+
+    <!-- Kanban Board -->
+    <div id="board" class="kanban-board hidden">
+        <!-- Defined columns mapping to Agile phases -->
+        <div class="kanban-column" id="col-backlog">
+            <div class="column-header">
+                <span class="uppercase tracking-widest text-sm text-slate-300">Sprint Backlog</span>
+                <span id="count-backlog" class="bg-indigo-900 text-indigo-200 px-3 py-1 rounded-full text-xs box-content">0</span>
+            </div>
+            <div class="column-body" id="body-backlog"></div>
+        </div>
+        
+        <div class="kanban-column" id="col-progress">
+            <div class="column-header">
+                <span class="uppercase tracking-widest text-sm text-sky-300">Agent Executing</span>
+                <span id="count-progress" class="bg-sky-900 text-sky-200 px-3 py-1 rounded-full text-xs">0</span>
+            </div>
+            <div class="column-body" id="body-progress"></div>
+        </div>
+
+        <div class="kanban-column" id="col-qa">
+            <div class="column-header">
+                <span class="uppercase tracking-widest text-sm text-rose-300">QA Automated Audit</span>
+                <span id="count-qa" class="bg-rose-900 text-rose-200 px-3 py-1 rounded-full text-xs">0</span>
+            </div>
+            <div class="column-body" id="body-qa"></div>
+        </div>
+
+        <div class="kanban-column" id="col-ceo">
+            <div class="column-header">
+                <span class="uppercase tracking-widest text-sm text-emerald-300">CEO Approval</span>
+                <span id="count-ceo" class="bg-emerald-900 text-emerald-200 px-3 py-1 rounded-full text-xs">0</span>
+            </div>
+            <div class="column-body" id="body-ceo"></div>
+        </div>
+    </div>
+
+    <script>
+        const DOMAINS = ['qorvari-crypto/qorvari-discovery-initiator', 'qorvari-crypto/qorvari-ui'];
+        let pollInterval;
+
+        function getBadge(text) {
+            const l = text.toLowerCase();
+            let c = 'agent-po';
+            if(l.includes('backend') || l.includes('frontend')) c = 'agent-dev';
+            if(l.includes('devops')) c = 'agent-ops';
+            if(l.includes('qa')) c = 'agent-qa';
+            
+            return `<span class="agent-badge ${c}">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                ${text.replace('@Agent-', '')}
+            </span>`;
+        }
+
+        async function fetchIssuesData(token) {
+            let all = [];
+            for(const r of DOMAINS) {
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${r}/issues?state=open`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if(res.ok) {
+                        const json = await res.json();
+                        all.push(...json.filter(i => !i.pull_request));
+                    }
+                } catch(e) { console.error(e); }
+            }
+            return all;
+        }
+
+        function renderBoard(issues) {
+            document.getElementById('stat-tickets').innerText = issues.length;
+            const bBody = document.getElementById('body-backlog');
+            bBody.innerHTML = '';
+            
+            issues.forEach(issue => {
+                const repo = issue.repository_url.split('/').pop();
+                const match = issue.body ? issue.body.match(/@(Agent-[A-Za-z0-9-]+)/i) : null;
+                const agent = match ? getBadge(match[1]) : '';
+                const labels = issue.labels.map(l => `<span class="text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded border" style="border-color:#${l.color}88; color:#${l.color}">${l.name}</span>`).join('');
+                
+                const card = `
+                    <div class="ticket-card" onclick="window.open('${issue.html_url}', '_blank')">
+                        <div class="text-[0.65rem] text-slate-400 uppercase tracking-widest mb-2">${repo}</div>
+                        <h4 class="font-semibold text-sm mb-3 text-white leading-snug">${issue.title}</h4>
+                        <div class="flex flex-wrap gap-1 mb-3">${labels}</div>
+                        <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-700/50">
+                            <span class="text-xs text-slate-500">#${issue.number}</span>
+                            ${agent}
+                        </div>
+                    </div>
+                `;
+                bBody.innerHTML += card;
+            });
+            document.getElementById('count-backlog').innerText = issues.length;
+        }
+
+        async function updateData() {
+            const token = document.getElementById('pat-input').value;
+            if(!token) return;
+            const issues = await fetchIssuesData(token);
+            renderBoard(issues);
+            
+            // Flash UI to show sync
+            const badge = document.getElementById('sync-status');
+            badge.style.opacity = '0.5';
+            setTimeout(() => badge.style.opacity = '1', 500);
+        }
+
+        function initializeDashboard() {
+            const token = document.getElementById('pat-input').value;
+            if(!token) return alert('Token required');
+            
+            document.getElementById('auth-panel').style.display = 'none';
+            document.getElementById('stats-panel').style.display = 'grid';
+            document.getElementById('board').classList.remove('hidden');
+            
+            updateData();
+            // Polling every 15 seconds for real-time edge
+            pollInterval = setInterval(updateData, 15000);
+        }
+    </script>
+</body>
+</html>
