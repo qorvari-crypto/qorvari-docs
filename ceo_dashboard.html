@@ -51,13 +51,14 @@
             <div id="sprint-controls" class="flex items-center gap-4 border-r border-slate-700/50 pr-6">
                 <div class="text-left">
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Active Iteration</div>
-                    <div class="text-lg font-bold text-sky-400 mt-0.5 flex items-center">
-                        <button onclick="changeSprint(-1)" class="text-slate-500 hover:text-white mr-1 text-xs transition border border-transparent hover:border-slate-600 rounded">◀</button>
+                    <div class="text-lg font-bold text-sky-400 mt-0.5 flex items-center gap-2">
+                        <button id="btn-sprint-back" onclick="viewPreviousSprint()" class="text-slate-500 hover:text-white text-xs transition border border-slate-700 hover:border-sky-500 rounded px-1.5 py-0.5 hidden" title="View previous sprint">◀</button>
                         <span>SPRINT <span id="sprint-id-display">2</span></span>
-                        <button onclick="changeSprint(1)" class="text-slate-500 hover:text-white ml-1 text-xs transition border border-transparent hover:border-slate-600 rounded">▶</button>
+                        <span id="sprint-viewing-badge" class="hidden text-[9px] bg-amber-600/20 border border-amber-500/50 text-amber-400 px-2 py-0.5 rounded uppercase font-bold tracking-widest">Viewing History</span>
+                        <button id="btn-sprint-return" onclick="returnToActiveSprint()" class="hidden text-[9px] bg-sky-600 hover:bg-sky-500 text-white px-2 py-0.5 rounded font-bold transition tracking-wider">Return to Active ▶</button>
                     </div>
                 </div>
-                <button onclick="closeActiveSprint()" class="ml-4 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-[10px] uppercase font-bold transition text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] tracking-wider">
+                <button onclick="closeActiveSprint()" id="btn-finalize" class="ml-4 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-[10px] uppercase font-bold transition text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] tracking-wider">
                     Finalize Sprint
                 </button>
             </div>
@@ -200,20 +201,69 @@
             renderUI();
         }
 
+        let viewingSprint = null; // null means we're viewing the active sprint
+
         function getActiveSprint() { return parseInt(localStorage.getItem('qorvari_active_sprint')) || 2; }
-        
+        function getViewingSprint() { return viewingSprint !== null ? viewingSprint : getActiveSprint(); }
+
+        function viewPreviousSprint() {
+            let current = getViewingSprint();
+            if (current > 1) {
+                viewingSprint = current - 1;
+                updateSprintHeader();
+                renderUI();
+            }
+        }
+
+        function returnToActiveSprint() {
+            viewingSprint = null;
+            updateSprintHeader();
+            renderUI();
+        }
+
+        function updateSprintHeader() {
+            const displaying = getViewingSprint();
+            const active = getActiveSprint();
+            document.getElementById('sprint-id-display').innerText = displaying;
+
+            const backBtn = document.getElementById('btn-sprint-back');
+            const histBadge = document.getElementById('sprint-viewing-badge');
+            const returnBtn = document.getElementById('btn-sprint-return');
+            const finalizeBtn = document.getElementById('btn-finalize');
+
+            // Show back arrow only if there's history to view
+            backBtn.classList.toggle('hidden', displaying <= 1);
+
+            if (displaying < active) {
+                // Viewing history
+                histBadge.classList.remove('hidden');
+                returnBtn.classList.remove('hidden');
+                finalizeBtn.classList.add('hidden');
+            } else {
+                // Viewing current active sprint
+                histBadge.classList.add('hidden');
+                returnBtn.classList.add('hidden');
+                finalizeBtn.classList.remove('hidden');
+            }
+        }
+
         function changeSprint(delta) {
+            // Only used internally by deploySprint; external nav uses viewPreviousSprint/returnToActiveSprint
             let active = getActiveSprint();
             active = Math.max(1, active + delta);
             localStorage.setItem('qorvari_active_sprint', active);
-            document.getElementById('sprint-id-display').innerText = active;
+            viewingSprint = null;
+            updateSprintHeader();
             renderUI();
         }
 
         function closeActiveSprint() {
             let active = getActiveSprint();
             showModal('confirm', 'Finalize Sprint Iteration', `Are you officially finalizing SPRINT ${active} and rotating the matrix to SPRINT ${active + 1}?`, () => {
-                changeSprint(1);
+                localStorage.setItem('qorvari_active_sprint', active + 1);
+                viewingSprint = null;
+                updateSprintHeader();
+                renderUI();
                 showModal('success', 'Iteration Cycled', `Sprint ${active+1} is now the target algorithmic operational timeline.`);
             });
         }
@@ -265,7 +315,7 @@
         }
 
         function renderActiveBoard() {
-            const activeSprint = getActiveSprint();
+            const activeSprint = getViewingSprint();
             ['body-backlog', 'body-progress', 'body-qa', 'body-ceo', 'body-done'].forEach(id => document.getElementById(id).innerHTML = '');
             const counts = { backlog: 0, progress: 0, qa: 0, ceo: 0, done: 0 };
 
